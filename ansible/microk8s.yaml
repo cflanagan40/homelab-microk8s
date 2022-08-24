@@ -1,0 +1,66 @@
+---
+- hosts: servers
+  vars_files:
+    - vars.yaml
+
+  roles:
+    - role: istvano.microk8s
+      vars:
+        microk8s_version: 1.24/stable
+        microk8s_plugins:
+          dns: true
+          rbac: true
+          host-access: true
+          helm3: true
+          prometheus: true
+          metrics-server: true
+          dashboard: true
+          ingress: true
+          metallb: "10.64.140.43-10.64.140.49"
+  tasks:
+    - name: Install pip
+      become: true
+      apt:
+        state: present
+        name: python3-pip
+
+    - name: Pip install kubernetes
+      pip:
+        name: kubernetes
+
+    - name: Get latest stable version number for kubectl
+      ansible.builtin.uri:
+        url: "https://storage.googleapis.com/kubernetes-release/release/stable.txt"
+        return_content: yes
+      register: stable_version
+
+    - name: Download the latest stable version of kubectl
+      become: true
+      ansible.builtin.get_url:
+        url: "https://storage.googleapis.com/kubernetes-release/release/{{ stable_version.content }}/bin/linux/amd64/kubectl"
+        dest: /usr/local/bin/kubectl
+        mode: 0755
+
+    - name: "Add current user [ansible] into microk8s group"
+      become: true
+      ansible.builtin.user:
+        name: "ansible"
+        groups: microk8s
+        append: yes
+
+    # Login again to refresh membership change
+    - name: Reset SSH connection
+      meta: reset_connection
+
+    - name: Configure host kubectl (instead of running 'microk8s kubectl' every time)
+      ansible.builtin.file:
+        path: .kube  # This will default to $HOME/.kube
+        state: directory
+      become_user: "ansible"
+
+    - name: Configure kube config for current user
+      shell: |
+        cd .kube && microk8s config > config
+        chmod 600 config
+      become_user: "ansible"
+

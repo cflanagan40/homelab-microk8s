@@ -1,0 +1,12 @@
+[servers]
+controller-00 ansible_host=10.0.0.73
+controller-01 ansible_host=10.0.0.74
+
+[nfs-servers]
+nfs-00 ansible_host=10.0.0.72
+
+[servers:vars]
+ansible_user=ansible
+
+[nfs-servers:vars]
+ansible_user=ansible

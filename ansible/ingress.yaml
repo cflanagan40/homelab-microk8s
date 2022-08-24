@@ -1,0 +1,27 @@
+---
+- hosts: servers
+  tasks:
+   - name: Configure Ingress
+     kubernetes.core.k8s:
+       state: present
+       definition:
+         apiVersion: v1
+         data:
+           config: |
+             peers:
+             - peer-address: 10.0.0.1
+               peer-asn: 64512
+               my-asn: 64512
+             address-pools:
+             - name: bgp
+               protocol: bgp
+               addresses:
+               - 10.0.0.150-10.0.0.200
+               avoid-buggy-ips: true
+         kind: ConfigMap
+         metadata:
+           name: config
+           namespace: metallb-system
+     tags:
+       - ingress
+

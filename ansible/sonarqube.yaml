@@ -1,0 +1,44 @@
+---
+- hosts: servers
+  tasks:
+       - name: Add Helm repo for Sonarqubue
+         kubernetes.core.helm_repository:
+           name: sonarqube
+           repo_url: https://SonarSource.github.io/helm-chart-sonarqube
+         become_user: "ansible"
+         tags:
+           - sonarqube
+
+       - name: Create sonarqube namespace
+         kubernetes.core.k8s:
+           state: present
+           name: sonarqube
+           api_version: v1
+           kind: Namespace
+         tags:
+           - sonarqube
+
+       - name: Install Sonarqube using Helm
+         kubernetes.core.helm:
+           release_name: sonarqube
+           release_namespace: sonarqube
+           chart_ref: sonarqube/sonarqube
+           release_values:
+             nginx:
+               enabled: true
+             ingress:
+               enabled: true
+               # Used to create an Ingress record.
+               hosts:
+                 - name: sonarqube
+                   # Different clouds or configurations might need /* as the default path
+                   path: /*
+                   # For additional control over serviceName and servicePort
+                   serviceName: sonarqube-sonarqube
+                   servicePort: 9000
+               annotations:
+                 kubernetes.io/ingress.class: nginx
+                 nginx.ingress.kubernetes.io/proxy-body-size: "8m"
+         become_user: "ansible"
+         tags:
+           - sonarqube

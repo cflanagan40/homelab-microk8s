@@ -1,0 +1,77 @@
+---
+- hosts: nfs-servers
+  vars_files:
+    - vars.yaml
+  become: yes
+  tasks:
+    - name: Install NFS
+      apt:
+        name: nfs-kernel-server
+        state: latest
+
+    - name: Create Directory
+      file:
+        path: "{{ export_path }}"
+        state: directory
+        owner: nobody
+        group: nogroup
+        mode: '0777'
+    - name: Enable Services
+      service:
+        name: "{{ item }}"
+        enabled: yes
+      with_items:
+        - nfs-kernel-server
+
+    - name: Setup Exports
+      template:
+        src: ./template/export.j2
+        dest: /etc/exports
+        owner: root
+        group: root
+        mode: 0644
+    - name: Update Config
+      shell: systemctl reload nfs; exportfs -a
+
+- hosts: servers
+  vars_files:
+    - vars.yaml
+  tasks:
+    - name: Add Helm repo for csi-driver-nfs
+      kubernetes.core.helm_repository:
+        name: csi-driver-nfs
+        repo_url: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
+      become_user: "ansible"
+      tags:
+        - subdir
+
+    - name: Install csi-driver-nfs using Helm
+      kubernetes.core.helm:
+        release_name: csi-driver-nfs
+        release_namespace: kube-system
+        chart_ref: csi-driver-nfs/csi-driver-nfs
+        release_values:
+          kubeletDir: /var/snap/microk8s/common/var/lib/kubelet
+      become_user: "ansible"
+      tags:
+        - subdir
+
+    - name: Add storage class
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: storage.k8s.io/v1
+          kind: StorageClass
+          metadata:
+            name: nfs-csi
+            annotations:
+              storageclass.kubernetes.io/is-default-class: "true"
+          provisioner: nfs.csi.k8s.io
+          parameters:
+            server: "{{ hostvars['nfs-00']['ansible_default_ipv4']['address'] }}"
+            share: "{{ export_path }}"
+          reclaimPolicy: Delete
+          volumeBindingMode: Immediate
+          mountOptions:
+            - hard
+            - nfsvers=4.1
