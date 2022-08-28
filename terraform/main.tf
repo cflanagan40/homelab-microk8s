@@ -15,13 +15,13 @@ provider "proxmox" {
 }
 
 module "vms" {
-  source = "./modules/proxmox-cloud-init"
+  source = "github.com/cflanagan40/proxmox-cloud-init.git"
   count = 2 
   vm_name = "node-${count.index}"
 }
 
 module "nfs" {
-  source = "./modules/proxmox-cloud-init"
+  source = "github.com/cflanagan40/proxmox-cloud-init.git"
   count = 1
   vm_name = "nfs-${count.index}"
   cpu = 2

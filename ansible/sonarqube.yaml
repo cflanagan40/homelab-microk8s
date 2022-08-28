@@ -24,18 +24,23 @@
            release_namespace: sonarqube
            chart_ref: sonarqube/sonarqube
            release_values:
+             prometheusExporter:
+               enabled: true
+               config:
+                 rules:
+                   - pattern: ".*"
              nginx:
                enabled: true
              ingress:
                enabled: true
                # Used to create an Ingress record.
                hosts:
-                 - name: sonarqube
+                 - name: sonarqube.devops.local
                    # Different clouds or configurations might need /* as the default path
-                   path: /*
+                   path: /
                    # For additional control over serviceName and servicePort
-                   serviceName: sonarqube-sonarqube
-                   servicePort: 9000
+                   # serviceName: sonarqube-sonarqube
+                   # servicePort: 9000
                annotations:
                  kubernetes.io/ingress.class: nginx
                  nginx.ingress.kubernetes.io/proxy-body-size: "8m"

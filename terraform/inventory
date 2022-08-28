@@ -10,3 +10,4 @@ ansible_user=ansible
 
 [nfs-servers:vars]
 ansible_user=ansible
+export_path=/srv/nfs
